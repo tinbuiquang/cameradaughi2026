@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vi Tính Camera Thiện Tín – Quản lý & Báo giá</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js">
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">
+</script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',Arial,sans-serif;font-size:14px;background:#f5f5f5;color:#222}
+.app{max-width:1100px;margin:0 auto;padding:16px}
+.header{background:#1a5fa8;color:#fff;border-radius:10px;padding:14px 20px;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.header h1{font-size:17px;font-weight:600}
+.header p{font-size:12px;opacity:.8;margin-top:2px}
+.tabs{display:flex;gap:4px;border-bottom:2px solid #1a5fa8;margin-bottom:16px;flex-wrap:wrap}
+.tab{padding:9px 18px;border:1px solid #ddd;border-bottom:none;border-radius:6px 6px 0 0;cursor:pointer;font-size:13px;font-weight:500;background:#e9e9e9;color:#555}
+.tab.active{background:#fff;border-color:#1a5fa8;color:#1a5fa8;border-bottom:2px solid #fff;margin-bottom:-2px}
+.tab:hover:not(.active){background:#d5e3f5}
+.panel{display:none}.panel.active{display:block}
+.card{background:#fff;border:1px solid #ddd;border-radius:10px;padding:16px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.card-title{font-size:13px;font-weight:600;color:#555;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid #eee;text-transform:uppercase;letter-spacing:.4px}
+.row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:4px;flex:1;min-width:100px}
+.field label{font-size:11px;color:#888;font-weight:600;text-transform:uppercase}
+.field input,.field select,.field textarea{padding:7px 10px;border:1px solid #ccc;border-radius:6px;font-size:13px}
+.tbl{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px}
+.tbl th{background:#eaf0fb;padding:8px 6px;text-align:left;font-size:12px;color:#1a5fa8;border:1px solid #ccd6ee}
+.tbl td{padding:3px 4px;border:1px solid #ddd}
+.tbl input{width:100%;border:none;background:transparent;padding:4px 5px;font-size:13px;outline:none}
+.tbl input:focus{background:#eaf0fb}
+.tbl .num input{text-align:right}
+td.stt{text-align:center;width:36px}
+.btn{padding:7px 14px;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;background:#fff;border:1px solid #ccc}
+.btn.primary{background:#1a5fa8;border-color:#1a5fa8;color:#fff}
+.btn.primary:hover{background:#134d8c}
+.btn.danger{color:#d9534f;border-color:#d9534f}
+.btn.danger:hover{background:#fdf0ef}
+.btn.success{background:#27a043;border-color:#27a043;color:#fff}
+.btn.orange{background:#e07b00;border-color:#e07b00;color:#fff}
+.btn.edit-btn{background:#ffc107;border-color:#ffc107;color:#000}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;padding-top:10px;border-top:1px solid #eee}
+.total-bar{display:flex;justify-content:flex-end;padding:10px;background:#eaf0fb;border-radius:6px;margin-top:4px}
+.total-bar strong{font-size:16px;color:#1a5fa8;margin-left:12px}
+.suggest-box{position:fixed;background:#fff;border:1px solid #bbd;border-radius:8px;max-height:200px;overflow-y:auto;z-index:9999}
+.suggest-item{padding:8px 12px;cursor:pointer}
+.suggest-item:hover{background:#eaf0fb}
+.customer-list{max-height:500px;overflow-y:auto}
+.customer-item{background:#f9f9f9;border:1px solid #e0e0e0;border-radius:8px;margin-bottom:10px;padding:12px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap}
+.customer-info{flex:1}
+.customer-name{font-weight:bold;font-size:15px;color:#1a5fa8}
+.customer-date{font-size:12px;color:#777}
+.customer-total{font-weight:600;color:#27a043}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10000;visibility:hidden;opacity:0;transition:all 0.2s}
+.modal.show{visibility:visible;opacity:1}
+.modal-content{background:#fff;max-width:90%;max-height:90%;overflow:auto;border-radius:12px;padding:20px;width:800px}
+.modal-header{display:flex;justify-content:space-between;margin-bottom:16px;border-bottom:2px solid #1a5fa8;padding-bottom:8px}
+.toast{position:fixed;bottom:20px;right:20px;background:#27a043;color:#fff;padding:10px 18px;border-radius:8px;z-index:10001}
+.badge{background:#eaf0fb;color:#1a5fa8;padding:4px 10px;border-radius:20px;font-size:12px}
+
+.tbl th:nth-child(7), .tbl td:nth-child(7) { min-width: 150px; width: 150px; }
+.tbl th:nth-child(6), .tbl td:nth-child(6) { min-width: 120px; width: 120px; }
+.tbl th:nth-child(5), .tbl td:nth-child(5) { width: 70px; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <div style="background:rgba(255,255,255,.2);border-radius:8px;padding:8px 12px;font-size:20px">📷</div>
+    <div><h1>Vi Tính Camera Thiện Tín – Báo giá & Hợp đồng</h1><p>224B Hàm Nghi - Bảo Lâm 1 - Lâm Đồng | ĐT: 08 1200 1211 – 0966 908 685</p></div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('bang-gia')">📦 Bảng giá SP</div>
+    <div class="tab" onclick="switchTab('hop-dong')">📄 Lập báo giá</div>
+    <div class="tab" onclick="switchTab('khach-hang')">👥 Khách hàng</div>
+  </div>
+
+  <!-- Tab Lập báo giá -->
+  <div class="panel" id="tab-hop-dong">
+    <div class="card">
+      <div class="card-title">Thông tin khách hàng</div>
+      <div class="row">
+        <div class="field" style="flex:0 0 75px"><label>Ngày</label><input type="number" id="ngay" placeholder="DD"></div>
+        <div class="field" style="flex:0 0 75px"><label>Tháng</label><input type="number" id="thang" placeholder="MM"></div>
+        <div class="field" style="flex:0 0 85px"><label>Năm</label><input type="number" id="nam" value="2026"></div>
+        <div class="field" style="flex:2"><label>Tên khách hàng</label><input type="text" id="ten_kh" placeholder="Nhập tên..."></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Địa chỉ</label><input type="text" id="dia_chi" placeholder="Địa chỉ"></div>
+        <div class="field"><label>Điện thoại</label><input type="text" id="dien_thoai" placeholder="Số điện thoại"></div>
+        <div class="field"><label>Địa điểm ký</label><input type="text" id="dia_diem" value="Bảo Lâm 1"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Danh sách thiết bị</div>
+      <div style="overflow-x:auto">
+        <table class="tbl" id="tbl-items">
+          <thead>
+            <tr><th style="width:40px">STT</th><th style="min-width:160px">Mô tả</th><th style="width:70px">BH</th><th style="width:65px">ĐVT</th><th style="width:65px" class="num">SL</th><th style="width:120px" class="num">Đơn giá</th><th style="width:150px" class="num">Thành tiền</th><th style="width:35px"></th></tr>
+          </thead>
+          <tbody id="items-body"></tbody>
+        </table>
+      </div>
+      <div class="total-bar"><span>Tổng cộng:</span><strong id="tong-tien">0 đ</strong></div>
+      <div class="actions">
+        <button class="btn primary" onclick="addRow()">+ Thêm dòng</button>
+        <button class="btn success" onclick="exportToPDF()">📑 Xuất báo giá PDF</button>
+        <button class="btn orange" onclick="saveCurrentCustomer()">💾 Lưu khách hàng</button>
+        <button class="btn" onclick="exportJson()">⬇ JSON hiện tại</button>
+        <button class="btn" onclick="triggerImportJson()">⬆ Nhập JSON</button>
+        <input type="file" id="import-file" accept=".json" style="display:none" onchange="importJson(event)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Bảng giá SP -->
+  <div class="panel active" id="tab-bang-gia">
+    <div class="card"><div class="card-title">Thêm sản phẩm mới</div>
+      <div class="row">
+        <div class="field"><label>Tên SP</label><input type="text" id="sp-ten"></div>
+        <div class="field"><label>Bảo hành</label><input type="text" id="sp-bh"></div>
+        <div class="field"><label>ĐVT</label><input type="text" id="sp-dvt"></div>
+        <div class="field"><label>Đơn giá (đ)</label><input type="number" id="sp-gia"></div>
+        <button class="btn primary" onclick="addSanPham()">+ Thêm</button>
+      </div>
+    </div>
+    <div class="card"><div class="card-title">Danh sách sản phẩm</div>
+      <div style="margin-bottom:10px;display:flex;align-items:center;gap:8px">
+        <span style="font-size:13px;color:#555;white-space:nowrap">🔍 Tìm kiếm:</span>
+        <input type="text" id="sp-search" placeholder="Gõ tên sản phẩm để tìm..." oninput="filterSanPhams()" style="flex:1;padding:7px 12px;border:1px solid #1a5fa8;border-radius:6px;font-size:13px;outline:none">
+        <button class="btn" onclick="document.getElementById('sp-search').value='';filterSanPhams()" style="white-space:nowrap">✕ Xóa</button>
+      </div>
+      <table class="tbl" id="sp-table"><thead><tr><th>#</th><th>Tên</th><th>BH</th><th>ĐVT</th><th style="min-width:140px">Đơn giá</th><th></th></tr></thead><tbody id="sp-body"></tbody></table>
+      <div class="actions">
+        <button class="btn orange" onclick="exportSpJson()">Xuất bảng giá JSON</button>
+        <button class="btn" onclick="triggerImportSp()">Nhập JSON</button>
+        <input type="file" id="import-sp-file" accept=".json" style="display:none">
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab Quản lý khách hàng -->
+  <div class="panel" id="tab-khach-hang">
+    <div class="card">
+      <div class="card-title">📋 Danh sách khách hàng đã lưu</div>
+      <div class="actions" style="margin-top:0; border-top:none; padding-top:0; margin-bottom:12px">
+        <button class="btn success" onclick="exportCustomersToJson()">⬇ Xuất JSON danh sách KH</button>
+        <button class="btn primary" onclick="triggerImportCustomers()">⬆ Nhập JSON danh sách KH</button>
+        <input type="file" id="import-customers-file" accept=".json" style="display:none" onchange="importCustomersFromJson(event)">
+      </div>
+      <div id="customer-list-container" class="customer-list"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal xem chi tiết khách hàng -->
+<div id="customer-modal" class="modal">
+  <div class="modal-content">
+    <div class="modal-header"><h3>📄 Chi tiết khách hàng</h3><button class="btn" onclick="closeModal()">Đóng</button></div>
+    <div id="modal-detail"></div>
+  </div>
+</div>
+
+<script>
+// ==================== DỮ LIỆU & KHO LƯU TRỮ ====================
+let items = [];
+let sanPhams = JSON.parse(localStorage.getItem('thientinCamera_banggia') || '[]');
+let customers = JSON.parse(localStorage.getItem('thientinCamera_customers') || '[]');
+let activeSuggestRow = null;
+// Biến lưu id khách hàng đang sửa (nếu có)
+let editingCustomerId = null;
+
+// Helper
+function showToast(msg, color="#27a043") {
+  let t = document.createElement('div'); t.className = 'toast'; t.textContent = msg; t.style.background = color;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2500);
+}
+
+function fmt(n) { if(!n && n!==0) return ''; let v = parseFloat(String(n).replace(/[^0-9.-]/g,'')); return isNaN(v)? n : v.toLocaleString('vi-VN'); }
+function parseMoney(s) { let v = parseFloat(String(s).replace(/[^0-9.-]/g,'')); return isNaN(v)?0:v; }
+function calcThanhTien(dg, sl) {
+  if(String(dg).toLowerCase()==='tặng' || String(sl).toLowerCase()==='tặng') return 'Tặng';
+  let d=parseMoney(dg), s=parseMoney(sl); if(!d && !s) return 0; return d*s;
+}
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;'); }
+
+// Render bảng thiết bị
+function renderItems() {
+  let tbody = document.getElementById('items-body');
+  tbody.innerHTML = '';
+  items.forEach((it, idx) => {
+    let tt = calcThanhTien(it.don_gia, it.so_luong);
+    let ttDisplay = tt === 'Tặng' ? 'Tặng' : (tt ? fmt(tt)+' đ' : '');
+    let tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="stt">${idx+1}</td>
+      <td style="position:relative"><input value="${esc(it.mo_ta||'')}" placeholder="Mô tả..." oninput="updateItem(${idx},'mo_ta',this.value);showSuggest(${idx},this)" onfocus="showSuggest(${idx},this)" onblur="hideSuggestDelay()"></td>
+      <td><input value="${esc(it.bh||'')}" oninput="updateItem(${idx},'bh',this.value)"></td>
+      <td><input value="${esc(it.dvt||'')}" oninput="updateItem(${idx},'dvt',this.value)"></td>
+      <td class="num"><input value="${it.so_luong||''}" oninput="updateItem(${idx},'so_luong',this.value);updateTT(${idx})" style="text-align:right"></td>
+      <td class="num"><input value="${it.don_gia||''}" oninput="updateItem(${idx},'don_gia',this.value);updateTT(${idx})" style="text-align:right"></td>
+      <td class="tt-cell" id="tt-${idx}" style="text-align:right">${ttDisplay}</td>
+      <td><button class="btn sm danger" onclick="removeRow(${idx})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  });
+  updateTotal();
+}
+function updateItem(idx,field,val) { items[idx][field]=val; if(field!=='mo_ta') updateTotal(); }
+function updateTT(idx) { let tt=calcThanhTien(items[idx].don_gia, items[idx].so_luong); let cell=document.getElementById(`tt-${idx}`); if(cell) cell.innerText= tt==='Tặng'?'Tặng': (tt?fmt(tt)+' đ':''); updateTotal(); }
+function updateTotal() { let total=0; items.forEach(it=>{ let tt=calcThanhTien(it.don_gia,it.so_luong); if(typeof tt==='number') total+=tt; }); document.getElementById('tong-tien').innerText = fmt(total)+' đ'; }
+function addRow() { items.push({mo_ta:'',bh:'',dvt:'',so_luong:'',don_gia:''}); renderItems(); }
+function removeRow(idx) { items.splice(idx,1); renderItems(); }
+
+// Suggest từ bảng giá
+function normalizeStr(s) {
+  return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\u0111/g,'d');
+}
+function showSuggest(rowIdx, inputEl) {
+  activeSuggestRow = rowIdx;
+  let q = normalizeStr(inputEl.value.trim());
+  let matches = sanPhams.filter(sp => !q || normalizeStr(sp.ten).includes(q));
+  let portal = document.getElementById('suggest-portal') || (()=>{let d=document.createElement('div');d.id='suggest-portal';document.body.appendChild(d);return d;})();
+  if(!matches.length) { portal.style.display='none'; return; }
+  let rect = inputEl.getBoundingClientRect();
+  portal.style.cssText = `display:block;position:fixed;left:${rect.left}px;top:${rect.bottom+4}px;min-width:280px;max-height:300px;overflow-y:auto;background:white;border:1px solid #bbd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:9999`;
+  portal.innerHTML = matches.map(sp => `<div class="suggest-item" onmousedown="selectSuggest(${sp.id})">${esc(sp.ten)}<br><small>${sp.dvt||''} | ${sp.gia?fmt(sp.gia)+'đ':''}</small></div>`).join('');
+}
+function hideSuggestDelay() { setTimeout(()=>{ let p=document.getElementById('suggest-portal'); if(p) p.style.display='none'; },200); }
+function selectSuggest(spId) {
+  let sp = sanPhams.find(s=>s.id===spId);
+  if(sp && activeSuggestRow!==null) {
+    items[activeSuggestRow] = { mo_ta: sp.ten, bh: sp.bh||'', dvt: sp.dvt||'', so_luong: items[activeSuggestRow].so_luong||'', don_gia: sp.gia||'' };
+    renderItems();
+    document.getElementById('suggest-portal').style.display='none';
+  }
+}
+
+// ========== QUẢN LÝ KHÁCH HÀNG ==========
+function saveCurrentCustomer() {
+  let ten = document.getElementById('ten_kh').value.trim();
+  if(!ten) { showToast('Vui lòng nhập tên khách hàng!','#d9534f'); return; }
+  let customerData = {
+    id: editingCustomerId || Date.now(), // nếu đang sửa thì giữ id cũ
+    ngay: document.getElementById('ngay').value,
+    thang: document.getElementById('thang').value,
+    nam: document.getElementById('nam').value,
+    ten_kh: ten,
+    dia_chi: document.getElementById('dia_chi').value,
+    dien_thoai: document.getElementById('dien_thoai').value,
+    dia_diem: document.getElementById('dia_diem').value,
+    items: JSON.parse(JSON.stringify(items)),
+    created_at: new Date().toLocaleString()
+  };
+  if (editingCustomerId) {
+    // Cập nhật khách hàng hiện có
+    let index = customers.findIndex(c => c.id === editingCustomerId);
+    if (index !== -1) {
+      customers[index] = customerData;
+      showToast('Đã cập nhật khách hàng: ' + ten);
+    } else {
+      customers.unshift(customerData);
+      showToast('Đã thêm mới khách hàng: ' + ten);
+    }
+    editingCustomerId = null; // reset trạng thái sửa
+  } else {
+    // Thêm mới
+    customers.unshift(customerData);
+    showToast('Đã lưu khách hàng: ' + ten);
+  }
+  localStorage.setItem('thientinCamera_customers', JSON.stringify(customers));
+  renderCustomerList();
+}
+
+function renderCustomerList() {
+  let container = document.getElementById('customer-list-container');
+  if(!container) return;
+  if(customers.length===0) { container.innerHTML='<div class="card" style="text-align:center;color:#888">Chưa có khách hàng nào. Hãy lưu từ tab "Lập báo giá".</div>'; return; }
+  container.innerHTML = '';
+  customers.forEach(c => {
+    let total = 0;
+    c.items.forEach(it=>{ let tt=calcThanhTien(it.don_gia,it.so_luong); if(typeof tt==='number') total+=tt; });
+    let div = document.createElement('div'); div.className = 'customer-item';
+    div.innerHTML = `
+      <div class="customer-info">
+        <div class="customer-name">${esc(c.ten_kh)}</div>
+        <div class="customer-date">Ngày: ${c.ngay||'?'}/${c.thang||'?'}/${c.nam||'?'} | ĐT: ${c.dien_thoai||'---'}</div>
+        <div class="customer-total">Tổng: ${fmt(total)} đ</div>
+      </div>
+      <div style="display:flex;gap:6px; flex-wrap:wrap">
+        <button class="btn primary" onclick="viewCustomerDetail(${c.id})">👁 Xem chi tiết</button>
+        <button class="btn success" onclick="printCustomerPDF(${c.id})">📑 In PDF</button>
+        <button class="btn edit-btn" onclick="editCustomer(${c.id})">✏️ Sửa</button>
+        <button class="btn danger" onclick="deleteCustomer(${c.id})">🗑 Xóa</button>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// Hàm mới: In PDF cho một khách hàng cụ thể từ danh sách
+async function printCustomerPDF(id) {
+  const { jsPDF } = window.jspdf;
+  let customer = customers.find(c => c.id === id);
+  if (!customer) {
+    showToast('Không tìm thấy khách hàng!', '#d9534f');
+    return;
+  }
+  // Sử dụng dữ liệu của customer thay vì form
+  let tenKH = customer.ten_kh || 'Khách hàng';
+  let ngay = customer.ngay || '...';
+  let thang = customer.thang || '...';
+  let nam = customer.nam || '2026';
+  let diaChi = customer.dia_chi || '';
+  let dienThoai = customer.dien_thoai || '';
+  let diaDiem = customer.dia_diem || 'Bảo Lâm 1';
+  let totalVal = 0;
+  let itemsClone = customer.items.filter(it => it.mo_ta || it.don_gia || it.so_luong);
+  
+  let rowsHtml = '';
+  itemsClone.forEach((it, idx) => {
+    let tt = calcThanhTien(it.don_gia, it.so_luong);
+    if (typeof tt === 'number') totalVal += tt;
+    let ttStr = tt === 'Tặng' ? 'Tặng' : fmt(tt) + ' đ';
+    let dgStr = it.don_gia ? fmt(parseMoney(it.don_gia)) + ' đ' : '';
+    rowsHtml += `<tr>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${idx+1}</td>
+      <td style="border:1px solid #666;padding:10px;font-size:14pt">${esc(it.mo_ta||'')}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${esc(it.bh||'')}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${esc(it.dvt||'')}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${it.so_luong||''}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:right;font-size:14pt">${dgStr}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:right;min-width:130px;font-size:14pt">${ttStr}</td>
+    </tr>`;
+  });
+
+  let baoHanhHTML = `
+    <p style="margin:8px 0;font-size:14pt"><strong>Các Điều Khoản Bảo Hành:</strong></p>
+    <ol style="margin-left:20px; margin-bottom:10px;font-size:14pt">
+      <li>Sản phẩm phải còn thời gian bảo hành tương ứng được ghi trên hợp đồng.</li>
+      <li>Các sản phẩm được bảo hành phải trùng với sản phẩm được liệt kê trong hợp đồng.</li>
+      <li>Sản phẩm bảo hành phải còn nguyên vẹn, nguyên tem hoặc mã code của nhà sản xuất.</li>
+      <li>Trong thời gian bảo hành của sản phẩm. Nếu có lỗi thiết bị do nhà sản xuất, sản phẩm sẽ được đổi sản phẩm khác cùng loại nếu còn hàng hoặc sản phẩm khác có giá trị tương đương.</li>
+    </ol>
+    <p style="margin:8px 0;font-size:14pt"><strong>Các điểm loại trừ bảo hành:</strong></p>
+    <ol style="margin-left:20px; margin-bottom:10px;font-size:14pt">
+      <li>Sét đánh, chập điện, cháy nổ, bị bể vỡ và lỗi do người dùng gây nên.</li>
+    </ol>
+    <p style="margin:6px 0;font-size:14pt">(Điện Thoại báo hỏng và bảo hành: 08 1200 1211)</p>
+    <p style="margin:6px 0;font-size:14pt">Mọi chi tiết khác xin vui lòng liên hệ: 0966 908 685</p>
+  `;
+
+  let htmlContent = `
+    <div style="font-family:'Times New Roman',serif; width:100%; max-width:1000px; margin:0 auto; padding:30px; background:white; font-size:14pt; line-height:1.6">
+      <div style="text-align:center; margin-bottom:30px">
+        <h2 style="color:#1a5fa8; font-size:28pt; margin-bottom:10px; font-weight:bold">VI TÍNH CAMERA THIỆN TÍN</h2>
+        <p style="font-size:14pt; margin:6px 0">224B Hàm Nghi - Bảo Lâm 1 - Lâm Đồng | ĐT: 08 1200 1211 – 0966 908 685</p>
+        <h3 style="font-size:20pt; margin-top:16px; color:#1a5fa8; font-weight:bold">BÁO GIÁ CUNG CẤP & LẮP ĐẶT CAMERA</h3>
+      </div>
+      <div style="margin-bottom:24px">
+        <p style="margin:8px 0; font-size:14pt"><strong>Kính gửi:</strong> ${esc(tenKH)}</p>
+        <p style="margin:8px 0; font-size:14pt"><strong>Địa chỉ:</strong> ${esc(diaChi)} - Điện thoại: ${esc(dienThoai)}</p>
+        <p style="margin:8px 0; font-size:14pt"><strong>Ngày lập báo giá:</strong> ${ngay}/${thang}/${nam} - Địa điểm: ${esc(diaDiem)}</p>
+      </div>
+      <table style="width:100%; border-collapse:collapse; margin:16px 0; font-size:14pt">
+        <thead><tr style="background:#eaf0fb">
+          <th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">STT</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">Mô tả</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">BH</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">ĐVT</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">SL</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">Đơn giá</th><th style="border:1px solid #666;padding:12px;min-width:130px;font-size:14pt;font-weight:bold">Thành tiền</th>
+        </tr></thead>
+        <tbody>${rowsHtml || '<tr><td colspan="7" style="text-align:center;padding:20px;font-size:14pt">Chưa có thiết bị</td></td>'}</tbody>
+      </table>
+      <div style="text-align:right; margin:16px 0; font-size:18pt; font-weight:bold; color:#1a5fa8">Tổng cộng: ${fmt(totalVal)} đ</div>
+      <div style="margin-top:35px; font-size:14pt; line-height:1.6">
+        ${baoHanhHTML}
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:60px; font-size:14pt">
+        <div style="text-align:center"><strong>ĐẠI DIỆN BÊN B</strong><br><br><br>Bùi Quang Tín</div>
+        <div style="text-align:center"><strong>KHÁCH HÀNG</strong><br><br><br>Ký & ghi rõ họ tên</div>
+      </div>
+    </div>
+  `;
+
+  let tempDiv = document.createElement('div');
+  tempDiv.style.position = 'absolute'; tempDiv.style.left = '-9999px'; tempDiv.style.top = '0';
+  tempDiv.innerHTML = htmlContent;
+  document.body.appendChild(tempDiv);
+
+  try {
+    let canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff' });
+    let imgData = canvas.toDataURL('image/png');
+    let pdf = new jsPDF('p', 'mm', 'a4');
+    let imgWidth = 210;
+    let pageHeight = 297;
+    let imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let y = 0;
+    pdf.addImage(imgData, 'PNG', 0, y, imgWidth, imgHeight);
+    if (imgHeight > pageHeight) {
+      let remaining = imgHeight - pageHeight;
+      let offset = -pageHeight;
+      while (remaining > 0) {
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, offset, imgWidth, imgHeight);
+        offset -= pageHeight;
+        remaining -= pageHeight;
+      }
+    }
+    pdf.save(`BaoGia_${tenKH.replace(/\s/g,'_')}.pdf`);
+    showToast('Xuất PDF thành công!');
+  } catch(e) {
+    showToast('Lỗi tạo PDF: '+e.message, '#d9534f');
+  } finally {
+    document.body.removeChild(tempDiv);
+  }
+}
+
+// Hàm mới: Sửa khách hàng - load dữ liệu lên form
+function editCustomer(id) {
+  let customer = customers.find(c => c.id === id);
+  if (!customer) {
+    showToast('Không tìm thấy khách hàng!', '#d9534f');
+    return;
+  }
+  // Điền thông tin vào form
+  document.getElementById('ngay').value = customer.ngay || '';
+  document.getElementById('thang').value = customer.thang || '';
+  document.getElementById('nam').value = customer.nam || '2026';
+  document.getElementById('ten_kh').value = customer.ten_kh || '';
+  document.getElementById('dia_chi').value = customer.dia_chi || '';
+  document.getElementById('dien_thoai').value = customer.dien_thoai || '';
+  document.getElementById('dia_diem').value = customer.dia_diem || 'Bảo Lâm 1';
+  
+  // Load danh sách items
+  items = JSON.parse(JSON.stringify(customer.items || []));
+  if (items.length === 0) {
+    // nếu không có items, thêm 1 dòng trống
+    items = [{mo_ta:'',bh:'',dvt:'',so_luong:'',don_gia:''}];
+  }
+  // Đánh dấu đang sửa khách hàng này
+  editingCustomerId = customer.id;
+  
+  renderItems();
+  // Chuyển sang tab Lập báo giá
+  switchTab('hop-dong');
+  showToast('Đã mở khách hàng: ' + customer.ten_kh + ' để chỉnh sửa. Nhấn "Lưu khách hàng" để cập nhật.');
+}
+
+function viewCustomerDetail(id) {
+  let customer = customers.find(c=>c.id===id);
+  if(!customer) return;
+  let modal = document.getElementById('customer-modal');
+  let detailDiv = document.getElementById('modal-detail');
+  let total = 0;
+  customer.items.forEach(it=>{ let tt=calcThanhTien(it.don_gia,it.so_luong); if(typeof tt==='number') total+=tt; });
+  let html = `<div><strong>Khách hàng:</strong> ${esc(customer.ten_kh)}</div>
+              <div><strong>Địa chỉ:</strong> ${esc(customer.dia_chi||'')}</div>
+              <div><strong>Điện thoại:</strong> ${esc(customer.dien_thoai||'')}</div>
+              <div><strong>Ngày lập:</strong> ${customer.ngay}/${customer.thang}/${customer.nam} tại ${customer.dia_diem||'Bảo Lâm 1'}</div>
+              <hr><h4>Danh sách thiết bị</h4>
+              <table style="width:100%;border-collapse:collapse;margin-top:8px"><thead><tr style="background:#eaf0fb"><th>STT</th><th>Mô tả</th><th>BH</th><th>ĐVT</th><th>SL</th><th>Đơn giá</th><th>Thành tiền</th></tr></thead><tbody>`;
+  customer.items.forEach((it,idx)=>{
+    let tt = calcThanhTien(it.don_gia, it.so_luong);
+    let ttStr = tt==='Tặng'?'Tặng':fmt(tt)+' đ';
+    let dgStr = it.don_gia ? fmt(parseMoney(it.don_gia))+' đ' : '';
+    html+=`<tr><td style="border:1px solid #ddd;padding:6px">${idx+1}</td>
+            <td style="border:1px solid #ddd;padding:6px">${esc(it.mo_ta||'')}</td>
+            <td style="border:1px solid #ddd;padding:6px">${esc(it.bh||'')}</td>
+            <td style="border:1px solid #ddd;padding:6px">${esc(it.dvt||'')}</td>
+            <td style="border:1px solid #ddd;padding:6px">${it.so_luong||''}</td>
+            <td style="border:1px solid #ddd;padding:6px">${dgStr}</td>
+            <td style="border:1px solid #ddd;padding:6px">${ttStr}</td>
+          </tr>`;
+  });
+  html+=`</tbody></table><div style="text-align:right;margin-top:12px;font-weight:bold">Tổng tiền: ${fmt(total)} đ</div>`;
+  detailDiv.innerHTML = html;
+  modal.classList.add('show');
+}
+function deleteCustomer(id) {
+  if(confirm('Xóa khách hàng này?')) { customers = customers.filter(c=>c.id!==id); localStorage.setItem('thientinCamera_customers', JSON.stringify(customers)); renderCustomerList(); showToast('Đã xóa'); }
+}
+function closeModal() { document.getElementById('customer-modal').classList.remove('show'); }
+
+// ========== XUẤT / NHẬP JSON DANH SÁCH KHÁCH HÀNG ==========
+function exportCustomersToJson() {
+  if(customers.length === 0) { showToast('Chưa có khách hàng nào để xuất!', '#e07b00'); return; }
+  const dataStr = JSON.stringify(customers, null, 2);
+  const blob = new Blob([dataStr], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `danh_sach_khach_hang_${new Date().toISOString().slice(0,19).replace(/:/g,'-')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Đã xuất ' + customers.length + ' khách hàng!');
+}
+function triggerImportCustomers() { document.getElementById('import-customers-file').click(); }
+function importCustomersFromJson(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    try {
+      const imported = JSON.parse(ev.target.result);
+      if(Array.isArray(imported)) {
+        if(confirm(`Bạn có muốn thay thế toàn bộ danh sách hiện tại (${customers.length} khách) bằng danh sách mới (${imported.length} khách) không?`)) {
+          customers = imported;
+        } else {
+          customers = [...imported, ...customers];
+        }
+        localStorage.setItem('thientinCamera_customers', JSON.stringify(customers));
+        renderCustomerList();
+        showToast(`Đã nhập ${imported.length} khách hàng!`);
+      } else { showToast('File không đúng định dạng (mảng khách hàng)','#d9534f'); }
+    } catch(e) { showToast('Lỗi đọc file JSON: ' + e.message, '#d9534f'); }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ========== XUẤT BÁO GIÁ PDF TỪ FORM HIỆN TẠI ==========
+async function exportToPDF() {
+  const { jsPDF } = window.jspdf;
+  let tenKH = document.getElementById('ten_kh').value || 'Khách hàng';
+  let ngay = document.getElementById('ngay').value || '...';
+  let thang = document.getElementById('thang').value || '...';
+  let nam = document.getElementById('nam').value || '2026';
+  let diaChi = document.getElementById('dia_chi').value || '';
+  let dienThoai = document.getElementById('dien_thoai').value || '';
+  let diaDiem = document.getElementById('dia_diem').value || 'Bảo Lâm 1';
+  let totalVal=0;
+  let itemsClone = items.filter(it=>it.mo_ta || it.don_gia || it.so_luong);
+  let rowsHtml = '';
+  itemsClone.forEach((it,idx)=>{
+    let tt = calcThanhTien(it.don_gia, it.so_luong);
+    if(typeof tt==='number') totalVal+=tt;
+    let ttStr = tt==='Tặng'?'Tặng':fmt(tt)+' đ';
+    let dgStr = it.don_gia ? fmt(parseMoney(it.don_gia))+' đ' : '';
+    rowsHtml+=`<tr>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${idx+1}</td>
+      <td style="border:1px solid #666;padding:10px;font-size:14pt">${esc(it.mo_ta||'')}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${esc(it.bh||'')}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${esc(it.dvt||'')}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:center;font-size:14pt">${it.so_luong||''}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:right;font-size:14pt">${dgStr}</td>
+      <td style="border:1px solid #666;padding:10px;text-align:right;min-width:130px;font-size:14pt">${ttStr}</td>
+    </tr>`;
+  });
+  let baoHanhHTML = `
+    <p style="margin:8px 0;font-size:14pt"><strong>Các Điều Khoản Bảo Hành:</strong></p>
+    <ol style="margin-left:20px; margin-bottom:10px;font-size:14pt">
+      <li>Sản phẩm phải còn thời gian bảo hành tương ứng được ghi trên hợp đồng.</li>
+      <li>Các sản phẩm được bảo hành phải trùng với sản phẩm được liệt kê trong hợp đồng.</li>
+      <li>Sản phẩm bảo hành phải còn nguyên vẹn, nguyên tem hoặc mã code của nhà sản xuất.</li>
+      <li>Trong thời gian bảo hành của sản phẩm. Nếu có lỗi thiết bị do nhà sản xuất, sản phẩm sẽ được đổi sản phẩm khác cùng loại nếu còn hàng hoặc sản phẩm khác có giá trị tương đương.</li>
+    </ol>
+    <p style="margin:8px 0;font-size:14pt"><strong>Các điểm loại trừ bảo hành:</strong></p>
+    <ol style="margin-left:20px; margin-bottom:10px;font-size:14pt">
+      <li>Sét đánh, chập điện, cháy nổ, bị bể vỡ và lỗi do người dùng gây nên.</li>
+    </ol>
+    <p style="margin:6px 0;font-size:14pt">(Điện Thoại báo hỏng và bảo hành: 08 1200 1211)</p>
+    <p style="margin:6px 0;font-size:14pt">Mọi chi tiết khác xin vui lòng liên hệ: 0966 908 685</p>
+  `;
+  let htmlContent = `
+    <div style="font-family:'Times New Roman',serif; width:100%; max-width:1000px; margin:0 auto; padding:30px; background:white; font-size:14pt; line-height:1.6">
+      <div style="text-align:center; margin-bottom:30px">
+        <h2 style="color:#1a5fa8; font-size:28pt; margin-bottom:10px; font-weight:bold">VI TÍNH CAMERA THIỆN TÍN</h2>
+        <p style="font-size:14pt; margin:6px 0">224B Hàm Nghi - Bảo Lâm 1 - Lâm Đồng | ĐT: 08 1200 1211 – 0966 908 685</p>
+        <h3 style="font-size:20pt; margin-top:16px; color:#1a5fa8; font-weight:bold">BÁO GIÁ CUNG CẤP & LẮP ĐẶT CAMERA</h3>
+      </div>
+      <div style="margin-bottom:24px">
+        <p style="margin:8px 0; font-size:14pt"><strong>Kính gửi:</strong> ${esc(tenKH)}</p>
+        <p style="margin:8px 0; font-size:14pt"><strong>Địa chỉ:</strong> ${esc(diaChi)} - Điện thoại: ${esc(dienThoai)}</p>
+        <p style="margin:8px 0; font-size:14pt"><strong>Ngày lập báo giá:</strong> ${ngay}/${thang}/${nam} - Địa điểm: ${esc(diaDiem)}</p>
+      </div>
+      <table style="width:100%; border-collapse:collapse; margin:16px 0; font-size:14pt">
+        <thead><tr style="background:#eaf0fb">
+          <th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">STT</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">Mô tả</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">BH</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">ĐVT</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">SL</th><th style="border:1px solid #666;padding:12px;font-size:14pt;font-weight:bold">Đơn giá</th><th style="border:1px solid #666;padding:12px;min-width:130px;font-size:14pt;font-weight:bold">Thành tiền</th>
+        </tr></thead>
+        <tbody>${rowsHtml || '<tr><td colspan="7" style="text-align:center;padding:20px;font-size:14pt">Chưa có thiết bị</td></td>'}</tbody>
+      </table>
+      <div style="text-align:right; margin:16px 0; font-size:18pt; font-weight:bold; color:#1a5fa8">Tổng cộng: ${fmt(totalVal)} đ</div>
+      <div style="margin-top:35px; font-size:14pt; line-height:1.6">
+        ${baoHanhHTML}
+      </div>
+      <div style="display:flex; justify-content:space-between; margin-top:60px; font-size:14pt">
+        <div style="text-align:center"><strong>ĐẠI DIỆN BÊN B</strong><br><br><br>Bùi Quang Tín</div>
+        <div style="text-align:center"><strong>KHÁCH HÀNG</strong><br><br><br>Ký & ghi rõ họ tên</div>
+      </div>
+    </div>
+  `;
+  let tempDiv = document.createElement('div');
+  tempDiv.style.position = 'absolute'; tempDiv.style.left = '-9999px'; tempDiv.style.top = '0';
+  tempDiv.innerHTML = htmlContent;
+  document.body.appendChild(tempDiv);
+  try {
+    let canvas = await html2canvas(tempDiv, { scale: 2, backgroundColor: '#ffffff' });
+    let imgData = canvas.toDataURL('image/png');
+    let pdf = new jsPDF('p', 'mm', 'a4');
+    let imgWidth = 210;
+    let pageHeight = 297;
+    let imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let y = 0;
+    pdf.addImage(imgData, 'PNG', 0, y, imgWidth, imgHeight);
+    if (imgHeight > pageHeight) {
+      let remaining = imgHeight - pageHeight;
+      let offset = -pageHeight;
+      while (remaining > 0) {
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, offset, imgWidth, imgHeight);
+        offset -= pageHeight;
+        remaining -= pageHeight;
+      }
+    }
+    pdf.save(`BaoGia_${tenKH.replace(/\s/g,'_')}.pdf`);
+    showToast('Xuất PDF thành công!');
+  } catch(e) { showToast('Lỗi tạo PDF: '+e.message,'#d9534f'); }
+  finally { document.body.removeChild(tempDiv); }
+}
+
+// ========== BẢNG GIÁ SẢN PHẨM ==========
+function renderSanPhams() {
+  let tbody = document.getElementById('sp-body'); if(!tbody) return;
+  let q = normalizeStr((document.getElementById('sp-search')||{}).value||'').trim();
+  let filtered = q ? sanPhams.filter(sp => normalizeStr(sp.ten).includes(q)) : sanPhams;
+  tbody.innerHTML = '';
+  filtered.forEach((sp,idx)=>{
+    let tr = document.createElement('tr');
+    tr.innerHTML = `<td>${idx+1}</td><td><strong>${esc(sp.ten)}</strong></td><td>${esc(sp.bh||'–')}</td><td>${esc(sp.dvt||'Cái')}</td><td class="num" style="min-width:140px">${sp.gia?fmt(sp.gia)+' đ':'–'}</td>
+    <td style="white-space:nowrap"><button class="btn sm edit-btn" onclick="editSp(${sp.id})" style="margin-right:4px">Sửa</button><button class="btn sm danger" onclick="deleteSp(${sp.id})">Xóa</button></td>`;
+    tbody.appendChild(tr);
+  });
+  if(filtered.length === 0 && q) {
+    let tr = document.createElement('tr');
+    tr.innerHTML = `<td colspan="6" style="text-align:center;padding:16px;color:#888">Không tìm thấy sản phẩm nào khớp với "<strong>${esc(q)}</strong>"</td>`;
+    tbody.appendChild(tr);
+  }
+  localStorage.setItem('thientinCamera_banggia', JSON.stringify(sanPhams));
+}
+function filterSanPhams() { renderSanPhams(); }
+function addSanPham() {
+  let ten = document.getElementById('sp-ten').value.trim();
+  if(!ten) return showToast('Nhập tên sản phẩm','#d9534f');
+  sanPhams.push({ id: Date.now(), ten, bh: document.getElementById('sp-bh').value, dvt: document.getElementById('sp-dvt').value||'Cái', gia: parseMoney(document.getElementById('sp-gia').value) });
+  renderSanPhams();
+  document.getElementById('sp-ten').value=''; document.getElementById('sp-bh').value=''; document.getElementById('sp-dvt').value=''; document.getElementById('sp-gia').value='';
+  showToast('Đã thêm');
+}
+function deleteSp(id) { if(confirm('Xóa?')) { sanPhams = sanPhams.filter(s=>s.id!==id); renderSanPhams(); } }
+function editSp(id) {
+  let sp = sanPhams.find(s => s.id === id);
+  if (!sp) return;
+  document.getElementById('sp-ten').value = sp.ten || '';
+  document.getElementById('sp-bh').value = sp.bh || '';
+  document.getElementById('sp-dvt').value = sp.dvt || '';
+  document.getElementById('sp-gia').value = sp.gia || '';
+  let btnAdd = document.querySelector('button[onclick="addSanPham()"]');
+  if (btnAdd) { btnAdd.textContent = '✔ Cập nhật'; btnAdd.setAttribute('onclick', 'saveSp('+id+')'); }
+  document.getElementById('sp-ten').focus();
+  showToast('Đang chỉnh sửa: ' + sp.ten, '#e07b00');
+}
+function saveSp(id) {
+  let ten = document.getElementById('sp-ten').value.trim();
+  if (!ten) return showToast('Nhập tên sản phẩm', '#d9534f');
+  let idx = sanPhams.findIndex(s => s.id === id);
+  if (idx !== -1) {
+    sanPhams[idx] = { id, ten, bh: document.getElementById('sp-bh').value, dvt: document.getElementById('sp-dvt').value || 'Cái', gia: parseMoney(document.getElementById('sp-gia').value) };
+  }
+  document.getElementById('sp-ten').value = '';
+  document.getElementById('sp-bh').value = '';
+  document.getElementById('sp-dvt').value = '';
+  document.getElementById('sp-gia').value = '';
+  let btnAdd = document.querySelector('button[onclick^="saveSp"]');
+  if (btnAdd) { btnAdd.textContent = '+ Thêm'; btnAdd.setAttribute('onclick', 'addSanPham()'); }
+  renderSanPhams();
+  showToast('Đã cập nhật sản phẩm!');
+}
+function exportSpJson() { let blob=new Blob([JSON.stringify(sanPhams,null,2)],{type:'application/json'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='BangGia.json'; a.click(); showToast('Xuất bảng giá JSON'); }
+function triggerImportSp() { document.getElementById('import-sp-file').click(); }
+document.getElementById('import-sp-file').addEventListener('change', e=>{
+  let file=e.target.files[0]; if(!file) return;
+  let reader=new FileReader(); reader.onload=ev=>{ try{ let data=JSON.parse(ev.target.result); if(Array.isArray(data)){ sanPhams=data; renderSanPhams(); showToast('Nhập thành công'); } }catch(e){ showToast('Lỗi file'); } }; reader.readAsText(file); e.target.value='';
+});
+
+// ========== JSON khách hàng hiện tại (báo giá tạm thời) ==========
+function exportJson() {
+  let data = { ngay: document.getElementById('ngay').value, thang: document.getElementById('thang').value, nam: document.getElementById('nam').value, ten_kh: document.getElementById('ten_kh').value, dia_chi: document.getElementById('dia_chi').value, dien_thoai: document.getElementById('dien_thoai').value, dia_diem: document.getElementById('dia_diem').value, items };
+  let blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}); let a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='baogia_hientai.json'; a.click(); showToast('Xuất JSON báo giá hiện tại');
+}
+function triggerImportJson() { document.getElementById('import-file').click(); }
+function importJson(e) {
+  let file=e.target.files[0]; if(!file) return;
+  let reader=new FileReader(); reader.onload=ev=>{ try{ let data=JSON.parse(ev.target.result); document.getElementById('ngay').value=data.ngay||''; document.getElementById('thang').value=data.thang||''; document.getElementById('nam').value=data.nam||'2026'; document.getElementById('ten_kh').value=data.ten_kh||''; document.getElementById('dia_chi').value=data.dia_chi||''; document.getElementById('dien_thoai').value=data.dien_thoai||''; document.getElementById('dia_diem').value=data.dia_diem||'Bảo Lâm 1'; items=data.items||[]; renderItems(); showToast('Nhập thành công'); }catch(e){ showToast('File lỗi'); } }; reader.readAsText(file); e.target.value='';
+}
+
+// Tab switching
+function switchTab(name) {
+  let tabs = document.querySelectorAll('.tab');
+  let panels = document.querySelectorAll('.panel');
+  tabs.forEach(t=>t.classList.remove('active'));
+  panels.forEach(p=>p.classList.remove('active'));
+  if(name==='bang-gia') { tabs[0].classList.add('active'); document.getElementById('tab-bang-gia').classList.add('active'); }
+  else if(name==='hop-dong') { tabs[1].classList.add('active'); document.getElementById('tab-hop-dong').classList.add('active'); }
+  else if(name==='khach-hang') { tabs[2].classList.add('active'); document.getElementById('tab-khach-hang').classList.add('active'); renderCustomerList(); }
+}
+
+// Init
+addRow();
+renderSanPhams();
+renderCustomerList();
+window.onclick = function(e) { let modal = document.getElementById('customer-modal'); if(e.target === modal) closeModal(); };
+</script>
+</body>
+</html>
